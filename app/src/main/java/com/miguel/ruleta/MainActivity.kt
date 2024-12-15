@@ -92,26 +92,8 @@ class MainActivity : ComponentActivity() {
 fun MainApp(modifier: Modifier = Modifier) {
     var initialBalance by remember { mutableDoubleStateOf(0.0) }
     var showGameScreen by remember { mutableStateOf(false) }
-    var showOutOfMoneyDialog by remember { mutableStateOf(false) }
 
-    if (showOutOfMoneyDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                showOutOfMoneyDialog = false
-                showGameScreen = false
-            },
-            title = { Text(text = "Saldo Agotado") },
-            text = { Text(text = "Te has quedado sin dinero. Por favor, reinicia el juego con un nuevo saldo inicial.") },
-            confirmButton = {
-                Button(onClick = {
-                    showOutOfMoneyDialog = false
-                    showGameScreen = false
-                }) {
-                    Text(text = "Aceptar")
-                }
-            }
-        )
-    } else if (!showGameScreen) {
+    if (!showGameScreen) {
         WelcomeScreen(
             modifier = Modifier.fillMaxSize(),
             onStartGame = { balance ->
@@ -124,7 +106,7 @@ fun MainApp(modifier: Modifier = Modifier) {
             modifier = Modifier.fillMaxSize(),
             initialBalance = initialBalance,
             onBalanceDepleted = {
-                showOutOfMoneyDialog = true
+                showGameScreen = false // Volver a la pantalla de inicio
             }
         )
     }
@@ -194,13 +176,18 @@ fun WelcomeScreen(modifier: Modifier = Modifier, onStartGame: (Double) -> Unit) 
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RouletteGame(modifier: Modifier = Modifier, initialBalance: Double, onBalanceDepleted: () -> Unit) {
+fun RouletteGame(
+    modifier: Modifier = Modifier,
+    initialBalance: Double,
+    onBalanceDepleted: () -> Unit
+) {
     var balance by remember { mutableDoubleStateOf(initialBalance) } // Saldo inicial
     var bet by remember { mutableStateOf("") } // Cantidad a apostar
     var selectedNumber by remember { mutableStateOf("") } // Número seleccionado para la apuesta
     var result by remember { androidx.compose.runtime.mutableIntStateOf(0) } // Resultado de la ruleta
     var showDialog by remember { mutableStateOf(false) } // Control del popup
     var message by remember { mutableStateOf("") } // Mensaje a mostrar en el popup
+    var isBalanceDepleted by remember { mutableStateOf(false) } // Estado de saldo agotado
 
     // Scroll
     val scrollState = rememberScrollState()
@@ -268,7 +255,6 @@ fun RouletteGame(modifier: Modifier = Modifier, initialBalance: Double, onBalanc
             val betAmount = bet.toDoubleOrNull() ?: 0.0
             val number = selectedNumber.toIntOrNull()
 
-            // Validaciones para apuestas y ganancias
             if (betAmount > 0 && betAmount <= balance && number != null && number in 0..36) {
                 result = (0..36).random() // Generar el número aleatorio de la ruleta
                 balance -= betAmount // Restar la cantidad apostada del saldo
@@ -278,17 +264,18 @@ fun RouletteGame(modifier: Modifier = Modifier, initialBalance: Double, onBalanc
                     balance += winnings // Sumar las ganancias al saldo
                     message = "¡Ganaste! Tu número: $number, Resultado: $result. Ganaste ${"%.2f".format(winnings)}€"
                 } else {
-                    message = "Perdiste. Tu número: $number, Resultado: $result."
+                    if (balance <= 0) {
+                        message = "Perdiste. Tu número: $number, Resultado: $result. ¡Te has quedado sin fondos!"
+                        showDialog = true
+                        isBalanceDepleted = true
+                    } else {
+                        message = "Perdiste. Tu número: $number, Resultado: $result."
+                        showDialog = true
+                    }
                 }
-                showDialog = true // Mostrar el popup con el mensaje
             } else {
                 message = "Saldo insuficiente, apuesta inválida o número incorrecto."
-                showDialog = true // Mostrar el popup con el error
-            }
-
-            // Verificar si el saldo llegó a 0
-            if (balance <= 0) {
-                onBalanceDepleted()
+                showDialog = true
             }
         }) {
             Text(text = "Girar Ruleta")
@@ -303,7 +290,10 @@ fun RouletteGame(modifier: Modifier = Modifier, initialBalance: Double, onBalanc
                 title = { Text(text = "Resultado") },
                 text = { Text(text = message) },
                 confirmButton = {
-                    Button(onClick = { showDialog = false }) {
+                    Button(onClick = {
+                        showDialog = false
+                        if (isBalanceDepleted) onBalanceDepleted()
+                    }) {
                         Text(text = "Aceptar")
                     }
                 }
@@ -314,8 +304,19 @@ fun RouletteGame(modifier: Modifier = Modifier, initialBalance: Double, onBalanc
 
 @Preview(showBackground = true)
 @Composable
-fun RoulettePreview() {
+fun WelcomeScreenPreview() {
     RuletaTheme {
-        MainApp()
+        WelcomeScreen(onStartGame = {})
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun RouletteGamePreview() {
+    RuletaTheme {
+        RouletteGame(
+            initialBalance = 1000.0,
+            onBalanceDepleted = {}
+        )
     }
 }
