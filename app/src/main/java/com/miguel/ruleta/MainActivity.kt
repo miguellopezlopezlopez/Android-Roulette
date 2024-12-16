@@ -256,7 +256,7 @@ fun RouletteGame(
             val number = selectedNumber.toIntOrNull()
 
             if (betAmount > 0 && betAmount <= balance && number != null && number in 0..36) {
-                result = (0..1).random() // Generar el número aleatorio de la ruleta
+                result = (0..36).random() // Generar el número aleatorio de la ruleta
                 balance -= betAmount // Restar la cantidad apostada del saldo
 
                 if (result == number) {
