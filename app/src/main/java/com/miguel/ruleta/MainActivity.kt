@@ -256,13 +256,14 @@ fun RouletteGame(
             val number = selectedNumber.toIntOrNull()
 
             if (betAmount > 0 && betAmount <= balance && number != null && number in 0..36) {
-                result = (0..36).random() // Generar el número aleatorio de la ruleta
+                result = (0..1).random() // Generar el número aleatorio de la ruleta
                 balance -= betAmount // Restar la cantidad apostada del saldo
 
                 if (result == number) {
                     val winnings = betAmount * 36 // Multiplicar la cantidad apostada por 36
                     balance += winnings // Sumar las ganancias al saldo
                     message = "¡Ganaste! Tu número: $number, Resultado: $result. Ganaste ${"%.2f".format(winnings)}€"
+                    showDialog = true
                 } else {
                     if (balance <= 0) {
                         message = "Perdiste. Tu número: $number, Resultado: $result. ¡Te has quedado sin fondos!"
